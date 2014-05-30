@@ -47,7 +47,8 @@ mexFunction(int nout, mxArray *out[],
   enum {IN_I = 0,
         IN_END } ;
   enum {OUT_SEEDS = 0,
-        OUT_PARENT = 1} ;
+        OUT_FRAMES = 1,
+        OUT_PARENT = 2} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -265,9 +266,11 @@ mexFunction(int nout, mxArray *out[],
   int count = 0 ;
   int len = (ner * sizeof(er)) + 1;
 
+  mexPrintf("erID = %d\n\n", er);
+
   mexPrintf("ner = %d\n", ner);
-  mexPrintf("len = %d\n", len);
-  mexPrintf("er = %d\n\n", sizeof(er));
+  mexPrintf("er = %d\n", sizeof(er));
+  mexPrintf("len = %d\n\n", len);
   mexPrintf("retrieved extremal region from vl_mser_process\n\n");
 
   const mwSize erdims[] = {len} ;
@@ -281,12 +284,14 @@ mexFunction(int nout, mxArray *out[],
 
   int in_count = count;
 
-  for (count; count < len; ++count) {
+  for (count; count < ner; ++count) {
 
     mexPrintf("\n\tPASS #%d\n\n", count);
 
     int     top     = er [count] .shortcut ;
     int     next    = 0 ;
+
+    if (in_count >= sizeof(er)) break;
 
     /* examine all parents */
     while (1) {
@@ -299,9 +304,9 @@ mexFunction(int nout, mxArray *out[],
       /* Break if:
        * - there is no node above the top
        */
-      if (next == top) {
-        break;
-      }
+      if (next == top) break;
+
+      mexPrintf("next: %d\n", next);
 
       /* add the parent to the array*/
       pD[in_count] = next;
@@ -314,7 +319,17 @@ mexFunction(int nout, mxArray *out[],
     }    
   }
 
-  /*  if (nout > 1) {
+  mexPrintf("\nFinished for loop!\n");
+
+  /*
+  mexPrintf("\n\tPRINT ARRAY\n\n");
+
+  for (count = 0; count < ner; ++count) {
+    mexPrintf("element %d: %d\n", count, pD[count]);
+  }
+  */
+
+  if (nout > 1) {
 
     odims [0] = dof ;
     odims [1] = nframes + nframesinv;
@@ -333,7 +348,7 @@ mexFunction(int nout, mxArray *out[],
         pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
       }
     }
-    } */
+  }
 
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;
@@ -354,11 +369,12 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("big enough,",       s-> num_too_small + sinv->num_too_small  ) ;
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
-  }
+    }
 
   /* cleanup */
+  
   if (datainv) mxFree(datainv);
   vl_mser_delete (filt) ;
   vl_mser_delete (filtinv) ;
-
+  
 }
