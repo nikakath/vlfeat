@@ -47,7 +47,7 @@ mexFunction(int nout, mxArray *out[],
   enum {IN_I = 0,
         IN_END } ;
   enum {OUT_SEEDS = 0,
-        OUT_FRAMES } ;
+        OUT_PARENT = 1} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -62,6 +62,8 @@ mexFunction(int nout, mxArray *out[],
   double   min_diversity = -1 ;
   int      bright_on_dark = 1 ;
   int      dark_on_bright = 1 ;
+
+  int ner;
 
   int nel ;
   int ndims ;
@@ -210,7 +212,7 @@ mexFunction(int nout, mxArray *out[],
   if (dark_on_bright)
   {
     /* process the image */
-    vl_mser_process (filt, data) ;
+    ner = vl_mser_process (filt, data) ;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
@@ -231,7 +233,7 @@ mexFunction(int nout, mxArray *out[],
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
 
     /* process the image */
-    vl_mser_process (filtinv, datainv) ;
+    ner = vl_mser_process (filtinv, datainv) ;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
@@ -246,6 +248,7 @@ mexFunction(int nout, mxArray *out[],
     }
   }
 
+
   odims [0]        = nregions + nregionsinv ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
   pt               = mxGetPr (out [OUT_SEEDS]) ;
@@ -256,8 +259,54 @@ mexFunction(int nout, mxArray *out[],
   for (i = nregions; i < nregions + nregionsinv; ++i)
     pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
-  /* optionally compute and save ellipsoids */
-  if (nout > 1) {
+  /* build an array of extremal regions to export */
+  
+  mexPrintf("reached array build\n");
+
+  const mwSize erdims[] = {((mwSize) (mxMalloc((ner + 1) * sizeof(VlMserExtrReg))))} ;
+
+  mexPrintf("allocated array\n");
+
+  int make_out[5];
+
+  mexPrintf("created an array\n");
+
+  mxCreateCellArray (1,erdims) ;
+
+  mexPrintf("created out array\n");
+
+  pt               = mxGetPr (out [OUT_PARENT]) ;
+
+  mexPrintf("created out pointer\n");
+
+  VlMserExtrReg * er = filt->er ;
+  int count = 0 ;
+
+  mexPrintf("retrieved extremal region from vl_mser_process\n");
+
+  for (count; count < ner; ++count) {
+
+    mexPrintf("inside for loop\n");
+
+    if (er->parent != er->index) {
+      mexPrintf("passed test\n");
+      pt[count] = er->parent ;
+      mexPrintf("placed parent in out array\n");
+      er->index = er->parent ;
+      mexPrintf("moved to parent\n");
+    } else break;
+
+    mexPrintf("finished crazy memory stuff\n");
+  }
+  /*
+  while(er->parent != er->index) { 
+    pt[count] = er->parent ;
+    er->index = er->parent ;
+    ++count ;
+  }
+  */
+
+  /*  if (nout > 1) {
 
     odims [0] = dof ;
     odims [1] = nframes + nframesinv;
@@ -276,7 +325,7 @@ mexFunction(int nout, mxArray *out[],
         pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
       }
     }
-  }
+    } */
 
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;
@@ -303,4 +352,5 @@ mexFunction(int nout, mxArray *out[],
   if (datainv) mxFree(datainv);
   vl_mser_delete (filt) ;
   vl_mser_delete (filtinv) ;
+
 }

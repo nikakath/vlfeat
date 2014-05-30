@@ -1,4 +1,4 @@
-% VL_MSER  Maximally Stable Extremal Regions
+e% VL_MSER  Maximally Stable Extremal Regions
 %   R=VL_MSER(I) computes the Maximally Stable Extremal Regions (MSER)
 %   [1] of image I with stability threshold DELTA. I is any array of
 %   class UINT8. R is a vector of region seeds.

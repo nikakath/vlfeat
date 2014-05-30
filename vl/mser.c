@@ -415,7 +415,7 @@ vl_mser_delete (VlMserFilt* f)
  ** @param im image data.
  **/
 VL_EXPORT
-void
+int
 vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
 {
   /* shortcuts */
@@ -701,9 +701,11 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
    *                                   Link extremal regions in a tree
    * -------------------------------------------------------------- */
 
+  vl_uint idx = NULL;
+
   for(i = 0 ; i < ner ; ++i) {
 
-    vl_uint idx = er [i] .index ;
+    idx = er [i] .index ;
 
     do {
       idx = r[idx] .parent ;
@@ -871,6 +873,9 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
   for (i = 0 ; i < ner ; ++i) {
     if (er [i] .max_stable) mer [j++] = er [i] .index ;
   }
+
+  return ner;
+
 }
 
 /** -------------------------------------------------------------------
