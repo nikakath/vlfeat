@@ -260,51 +260,59 @@ mexFunction(int nout, mxArray *out[],
     pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
   /* build an array of extremal regions to export */
-  
-  mexPrintf("reached array build\n");
-
-  const mwSize erdims[] = {((mwSize) (mxMalloc((ner + 1) * sizeof(VlMserExtrReg))))} ;
-
-  mexPrintf("allocated array\n");
-
-  int make_out[5];
-
-  mexPrintf("created an array\n");
-
-  mxCreateCellArray (1,erdims) ;
-
-  mexPrintf("created out array\n");
-
-  pt               = mxGetPr (out [OUT_PARENT]) ;
-
-  mexPrintf("created out pointer\n");
 
   VlMserExtrReg * er = filt->er ;
   int count = 0 ;
+  int len = (ner * sizeof(er)) + 1;
 
-  mexPrintf("retrieved extremal region from vl_mser_process\n");
+  mexPrintf("ner = %d\n", ner);
+  mexPrintf("len = %d\n", len);
+  mexPrintf("er = %d\n\n", sizeof(er));
+  mexPrintf("retrieved extremal region from vl_mser_process\n\n");
 
-  for (count; count < ner; ++count) {
+  const mwSize erdims[] = {len} ;
+  mexPrintf("created a dimensional array\n");
 
-    mexPrintf("inside for loop\n");
+  out[OUT_PARENT] = mxCreateCellArray(1,erdims) ;
+  mexPrintf("created out array\n") ;
 
-    if (er->parent != er->index) {
-      mexPrintf("passed test\n");
-      pt[count] = er->parent ;
-      mexPrintf("placed parent in out array\n");
-      er->index = er->parent ;
-      mexPrintf("moved to parent\n");
-    } else break;
+  double * pD = mxGetPr(out[OUT_PARENT]) ;
+  mexPrintf("created out pointer: size = %lf\n", &pD);
 
-    mexPrintf("finished crazy memory stuff\n");
+  int in_count = count;
+
+  for (count; count < len; ++count) {
+
+    mexPrintf("\n\tPASS #%d\n\n", count);
+
+    int     top     = er [count] .shortcut ;
+    int     next    = 0 ;
+
+    /* examine all parents */
+    while (1) {
+     
+      next     = er [top]  .parent ;
+      
+      mexPrintf("in_count = %d\n", in_count);
+      mexPrintf("count = %d\n", count);
+      
+      /* Break if:
+       * - there is no node above the top
+       */
+      if (next == top) {
+        break;
+      }
+
+      /* add the parent to the array*/
+      pD[in_count] = next;
+      ++in_count;
+      mexPrintf("parent added\n");
+      
+      /* so next could be the top */
+      top = next ;
+      mexPrintf("climbing up\n");
+    }    
   }
-  /*
-  while(er->parent != er->index) { 
-    pt[count] = er->parent ;
-    er->index = er->parent ;
-    ++count ;
-  }
-  */
 
   /*  if (nout > 1) {
 
