@@ -151,7 +151,7 @@ LIBTOOL ?= libtool
 
 STD_CLFAGS = $(CFLAGS)
 STD_CFLAGS += -std=c99
-STD_CFLAGS += -Wall -Wextra
+STD_CFLAGS += -Wall -Wextra -ggdb3
 STD_CFLAGS += -Wno-unused-function -Wno-long-long -Wno-variadic-macros
 STD_CFLAGS += $(if $(DEBUG), -DDEBUG -O0 -g, -DNDEBUG -O3)
 STD_CFLAGS += $(if $(PROFILE), -g)

@@ -64,8 +64,6 @@ mexFunction(int nout, mxArray *out[],
   int      bright_on_dark = 1 ;
   int      dark_on_bright = 1 ;
 
-  int ner_for_now;
-
   int nel ;
   int ndims ;
   mwSize const* dims ;
@@ -85,7 +83,9 @@ mexFunction(int nout, mxArray *out[],
   int nframes = 0, nframesinv = 0;
   int                i, j, dof = 0 ;
   mwSize             odims [2] ;
+  mwSize             erdims [2] ;
   double            *pt ;
+  double            *pd ;
 
   VL_USE_MATLAB_ENV ;
 
@@ -216,7 +216,7 @@ mexFunction(int nout, mxArray *out[],
   if (dark_on_bright)
   {
     /* process the image */
-    ner_for_now = vl_mser_process (filt, data) ;
+    vl_mser_process (filt, data) ;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
@@ -239,7 +239,7 @@ mexFunction(int nout, mxArray *out[],
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
 
     /* process the image */
-    ner_for_now = vl_mser_process (filtinv, datainv) ;
+    vl_mser_process (filtinv, datainv) ;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
@@ -256,7 +256,6 @@ mexFunction(int nout, mxArray *out[],
     }
   }
 
-
   odims [0]        = nregions + nregionsinv ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
   pt               = mxGetPr (out [OUT_SEEDS]) ;
@@ -267,70 +266,48 @@ mexFunction(int nout, mxArray *out[],
   for (i = nregions; i < nregions + nregionsinv; ++i)
     pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
-  /* build an array of extremal regions to export
+  /* build an array of extremal regions to export */
 
-  int count = 0 ;
-  int len = (ner * sizeof(er)) + 1;
-
-  mexPrintf("erID = %d\n\n", er);
-
-  mexPrintf("ner = %d\n", ner);
-  mexPrintf("er = %d\n", sizeof(er));
-  mexPrintf("len = %d\n\n", len);
-  mexPrintf("retrieved extremal region from vl_mser_process\n\n");
-
-  const mwSize erdims[] = {len} ;
-  mexPrintf("created a dimensional array\n");
-
-  out[OUT_PARENT] = mxCreateCellArray(1,erdims) ;
-  mexPrintf("created out array\n") ;
-
-  double * pD = mxGetPr(out[OUT_PARENT]) ;
-  mexPrintf("created out pointer: size = %lf\n", &pD);
-
+  /*
+  VlMserExtrReg * what = filt->er;
+  int count = 0;
   int in_count = count;
+  */
 
-  for (count; count < ner; ++count) {
+  erdims[0] = ner + nerinv ;
+  out[OUT_PARENT] = mxCreateCellArray(1, erdims) ;
+  pd = mxGetPr(out[OUT_PARENT]) ;
 
-    mexPrintf("\n\tPASS #%d\n\n", count);
+  for (i = 0 ; i < ner ; ++i)
+    pd [i] = (int)er [i] + 1 ;
 
-    int     top     = er [count] .shortcut ;
+  for (i = nregions; i < ner + nerinv; ++i)
+    pd [i] = -((int)erinv [i-ner] + 1) ;
+
+  /*
+  for (count; count < ner + nerinv; ++count) {
+
+    int     top     = what [count] .shortcut ;
     int     next    = 0 ;
 
-    if (in_count >= sizeof(er)) break;
+    if (in_count >= sizeof(what)) break;
 
     // examine all parents
     while (1) {
      
-      next     = er [top]  .parent ;
-      
-      mexPrintf("in_count = %d\n", in_count);
-      mexPrintf("count = %d\n", count);
+      next     = what [top]  .parent ;
       
       // Break if:
       //   - there is no node above the top
       if (next == top) break;
 
-      mexPrintf("next: %d\n", next);
-
       // add the parent to the array
       pD[in_count] = next;
       ++in_count;
-      mexPrintf("parent added\n");
       
       // so next could be the top
       top = next ;
-      mexPrintf("climbing up\n");
     }    
-  }
-
-  mexPrintf("\nFinished for loop!\n");
-
-
-  mexPrintf("\n\tPRINT ARRAY\n\n");
-
-  for (count = 0; count < ner; ++count) {
-    mexPrintf("element %d: %d\n", count, pD[count]);
   }
   */
 
