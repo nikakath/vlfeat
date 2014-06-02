@@ -701,7 +701,7 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
    *                                   Link extremal regions in a tree
    * -------------------------------------------------------------- */
 
-  vl_uint idx = NULL;
+ 
 
   for(i = 0 ; i < ner ; ++i) {
 
@@ -744,7 +744,7 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
     }
 
     /* calculate branch variation */
-    {
+     {
       int area     = er [i  ] .area ;
       int area_top = er [top] .area ;
       er [i] .variation  = (float) (area_top - area) / area ;
