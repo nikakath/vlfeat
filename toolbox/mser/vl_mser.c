@@ -64,7 +64,7 @@ mexFunction(int nout, mxArray *out[],
   int      bright_on_dark = 1 ;
   int      dark_on_bright = 1 ;
 
-  int ner;
+  int ner_for_now;
 
   int nel ;
   int ndims ;
@@ -76,9 +76,12 @@ mexFunction(int nout, mxArray *out[],
   VlMserFilt        *filt, *filtinv ;
   vl_uint     const *regions = 0 ;
   vl_uint     const *regionsinv = 0 ;
+  vl_uint     const *er = 0;
+  vl_uint     const *erinv = 0;
   float       const *frames = 0;
   float       const *framesinv = 0 ;
   int nregions = 0, nregionsinv = 0;
+  int ner = 0, nerinv = 0;
   int nframes = 0, nframesinv = 0;
   int                i, j, dof = 0 ;
   mwSize             odims [2] ;
@@ -213,11 +216,13 @@ mexFunction(int nout, mxArray *out[],
   if (dark_on_bright)
   {
     /* process the image */
-    ner = vl_mser_process (filt, data) ;
+    ner_for_now = vl_mser_process (filt, data) ;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
     regions          = vl_mser_get_regions     (filt) ;
+    ner              = vl_mser_get_eregions_num(filt) ;
+    er               = vl_mser_get_eregions    (filt) ;
 
     if (nout > 1) {
       vl_mser_ell_fit (filt) ;
@@ -234,11 +239,13 @@ mexFunction(int nout, mxArray *out[],
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
 
     /* process the image */
-    ner = vl_mser_process (filtinv, datainv) ;
+    ner_for_now = vl_mser_process (filtinv, datainv) ;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
     regionsinv     = vl_mser_get_regions     (filtinv) ;
+    nerinv         = vl_mser_get_eregions_num(filtinv) ;
+    erinv          = vl_mser_get_eregions    (filtinv) ;
 
     if (nout > 1) {
       vl_mser_ell_fit (filtinv) ;
@@ -260,9 +267,8 @@ mexFunction(int nout, mxArray *out[],
   for (i = nregions; i < nregions + nregionsinv; ++i)
     pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
-  /* build an array of extremal regions to export */
+  /* build an array of extremal regions to export
 
-  VlMserExtrReg * er = filt->er ;
   int count = 0 ;
   int len = (ner * sizeof(er)) + 1;
 
@@ -293,7 +299,7 @@ mexFunction(int nout, mxArray *out[],
 
     if (in_count >= sizeof(er)) break;
 
-    /* examine all parents */
+    // examine all parents
     while (1) {
      
       next     = er [top]  .parent ;
@@ -301,19 +307,18 @@ mexFunction(int nout, mxArray *out[],
       mexPrintf("in_count = %d\n", in_count);
       mexPrintf("count = %d\n", count);
       
-      /* Break if:
-       * - there is no node above the top
-       */
+      // Break if:
+      //   - there is no node above the top
       if (next == top) break;
 
       mexPrintf("next: %d\n", next);
 
-      /* add the parent to the array*/
+      // add the parent to the array
       pD[in_count] = next;
       ++in_count;
       mexPrintf("parent added\n");
       
-      /* so next could be the top */
+      // so next could be the top
       top = next ;
       mexPrintf("climbing up\n");
     }    
@@ -321,7 +326,7 @@ mexFunction(int nout, mxArray *out[],
 
   mexPrintf("\nFinished for loop!\n");
 
-  /*
+
   mexPrintf("\n\tPRINT ARRAY\n\n");
 
   for (count = 0; count < ner; ++count) {

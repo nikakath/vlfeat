@@ -442,7 +442,7 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
 
   int i, j, k ;
 
-  /* delete any previosuly computed ellipsoid */
+  /* delete any previously computed ellipsoid */
   f-> nell = 0 ;
 
   /* -----------------------------------------------------------------

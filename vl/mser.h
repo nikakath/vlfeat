@@ -72,6 +72,8 @@ VL_EXPORT void             vl_mser_ell_fit (VlMserFilt *f) ;
  **/
 VL_INLINE vl_uint          vl_mser_get_regions_num  (VlMserFilt const *f) ;
 VL_INLINE vl_uint const*   vl_mser_get_regions      (VlMserFilt const *f) ;
+VL_INLINE vl_uint          vl_mser_get_eregions_num (VlMserFilt const* f) ;
+VL_INLINE vl_uint const *  vl_mser_get_eregions     (VlMserFilt const* f) ;
 VL_INLINE float const*     vl_mser_get_ell          (VlMserFilt const *f) ;
 VL_INLINE vl_uint          vl_mser_get_ell_num      (VlMserFilt const *f) ;
 VL_INLINE vl_uint          vl_mser_get_ell_dof      (VlMserFilt const *f) ;
@@ -387,6 +389,26 @@ VL_INLINE vl_uint
 vl_mser_get_regions_num (VlMserFilt const* f)
 {
   return f-> nmer ;
+}
+
+/** @brief Get extremal regions
+ ** @param f MSER filter.
+ ** @return array of MSER pivots.
+ **/
+VL_INLINE vl_uint const *
+vl_mser_get_eregions (VlMserFilt const* f)
+{
+  return f-> er ;
+}
+
+/** @brief Get number of extremal regions
+ ** @param f MSER filter.
+ ** @return number of MSERs.
+ **/
+VL_INLINE vl_uint
+vl_mser_get_eregions_num (VlMserFilt const* f)
+{
+  return f-> ner ;
 }
 
 /* ----------------------------------------------------------------- */
