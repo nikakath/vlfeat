@@ -74,18 +74,18 @@ mexFunction(int nout, mxArray *out[],
   VlMserFilt        *filt, *filtinv ;
   vl_uint     const *regions = 0 ;
   vl_uint     const *regionsinv = 0 ;
-  vl_uint     const *er = 0;
-  vl_uint     const *erinv = 0;
+  //vl_uint     const *er = 0;
+  //vl_uint     const *erinv = 0;
   float       const *frames = 0;
   float       const *framesinv = 0 ;
   int nregions = 0, nregionsinv = 0;
-  int ner = 0, nerinv = 0;
+  //int ner = 0, nerinv = 0;
   int nframes = 0, nframesinv = 0;
   int                i, j, dof = 0 ;
   mwSize             odims [2] ;
-  mwSize             erdims [2] ;
+  //mwSize             erdims [2] ;
   double            *pt ;
-  double            *pd ;
+  //double            *pd ;
 
   VL_USE_MATLAB_ENV ;
 
@@ -221,8 +221,8 @@ mexFunction(int nout, mxArray *out[],
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
     regions          = vl_mser_get_regions     (filt) ;
-    ner              = vl_mser_get_eregions_num(filt) ;
-    er               = vl_mser_get_eregions    (filt) ;
+    //ner              = vl_mser_get_eregions_num(filt) ;
+    //er               = vl_mser_get_eregions    (filt) ;
 
     if (nout > 1) {
       vl_mser_ell_fit (filt) ;
@@ -244,8 +244,8 @@ mexFunction(int nout, mxArray *out[],
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
     regionsinv     = vl_mser_get_regions     (filtinv) ;
-    nerinv         = vl_mser_get_eregions_num(filtinv) ;
-    erinv          = vl_mser_get_eregions    (filtinv) ;
+    //nerinv         = vl_mser_get_eregions_num(filtinv) ;
+    //erinv          = vl_mser_get_eregions    (filtinv) ;
 
     if (nout > 1) {
       vl_mser_ell_fit (filtinv) ;
@@ -256,35 +256,38 @@ mexFunction(int nout, mxArray *out[],
     }
   }
 
-  odims [0]        = nregions + nregionsinv ;
-  out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
+  odims [0]        = 2 ;
+  odims [1]        = nregions + nregionsinv ;
+  out [OUT_SEEDS]  = mxCreateNumericArray (2, odims, mxDOUBLE_CLASS,mxREAL) ;
   pt               = mxGetPr (out [OUT_SEEDS]) ;
 
-  for (i = 0 ; i < nregions ; ++i)
-    pt [i] = (int)regions [i] + 1 ;
+  for (i = 0 ; i < nregions ; ++i) {
+    pt [i][0] = (int)regions[i] + 1 ;
+    pt [i][1] = (int)regions[i].parent + 1 ;
+  }
 
-  for (i = nregions; i < nregions + nregionsinv; ++i)
-    pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
+  for (i = nregions; i < nregions + nregionsinv; ++i) {
+    pt [i][0] = -((int)regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+    pt [i][1] = -((int)regionsinv[i-nregions].parent + 1) ;
+  }
 
-  /* build an array of extremal regions to export */
-
-  /*
-  VlMserExtrReg * what = filt->er;
-  int count = 0;
-  int in_count = count;
-  */
+  /* build an array of extremal regions to export
 
   erdims[0] = ner + nerinv ;
-  out[OUT_PARENT] = mxCreateCellArray(1, erdims) ;
+  out[OUT_PARENT] = mxCreateCellArray(ner + nerinv, erdims) ;
   pd = mxGetPr(out[OUT_PARENT]) ;
 
   for (i = 0 ; i < ner ; ++i)
-    pd [i] = (int)er [i] + 1 ;
+    pd [i] = er [i] ;
 
   for (i = nregions; i < ner + nerinv; ++i)
-    pd [i] = -((int)erinv [i-ner] + 1) ;
+    pd [i] = erinv [i-ner] ;
 
-  /*
+  VlMserExtrReg * what = filt->er;
+  int count = 0;
+  int in_count = count;
+   
+
   for (count; count < ner + nerinv; ++count) {
 
     int     top     = what [count] .shortcut ;
