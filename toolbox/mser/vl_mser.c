@@ -207,11 +207,13 @@ mexFunction(int nout, mxArray *out[],
     mexPrintf("mser:   min_diversity = %g\n", vl_mser_get_min_diversity (filt)) ;
   }
 
+  int ner,nerinv;
 
   if (dark_on_bright)
   {
     /* process the image */
    ner = vl_mser_process (filt, data) ;
+   er = filt->er;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
@@ -226,6 +228,7 @@ mexFunction(int nout, mxArray *out[],
     
     /* process the image */
     nerinv = vl_mser_process (filtinv, datainv) ;
+    erinv  =  filtinv->er;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
@@ -250,22 +253,15 @@ mexFunction(int nout, mxArray *out[],
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
-  mexPrintf("ner: %d\nnerinv: %d\n", ner, nerinv);
 
   for (i = 0 ; i < ner ; ++i) 
-    if (er[i].max_stable) { 
-      pt [k++] = er[i].parent + 1 ;
-      mexPrintf("%d is stable\n", er[i].parent + 1) ;
-    }
-    else mexPrintf("%d is not stable\n", er[i].parent + 1) ;
+    if (er[i].max_stable) 
+      pt [k++] = er[i].parent + 1;
 
-  for (i = ner; i < ner + nerinv; ++i) 
-    if (erinv[i-nregions].max_stable) {
-      pt [k++] = erinv[i-ner].parent + 1 ;
-      mexPrinf("%d is stable", erinv[i-ner].parent + 1) ;
-    }
-    else mexPrintf("%d is not stable\n", erinv[i-ner].parent + 1) ;
-
+  for (i = ner; i < ner+nerinv; ++i)
+    if (erinv[i-ner].max_stable)
+      pt [k++] = -(erinv[i-ner].parent + 1);
+ 
   /*
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;

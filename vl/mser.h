@@ -62,7 +62,7 @@ VL_EXPORT void             vl_mser_delete  (VlMserFilt *f) ;
 /** @name Processing
  ** @{
  **/
-VL_EXPORT int              vl_mser_process (VlMserFilt *f,
+VL_EXPORT int             vl_mser_process (VlMserFilt *f,
                                             vl_mser_pix const *im) ;
 VL_EXPORT void             vl_mser_ell_fit (VlMserFilt *f) ;
 /** @} */
