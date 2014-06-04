@@ -266,6 +266,7 @@ mexFunction(int nout, mxArray *out[],
   for (i = nregions; i < nregions + nregionsinv; ++i)
     pt [i] = -((int)regionsinv [i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
+
   /* build an array of extremal regions to export */
 
   /*
@@ -278,7 +279,6 @@ mexFunction(int nout, mxArray *out[],
   
   out[OUT_PARENT] = mxCreateNumericArray(1, erdims, mxUINT8_CLASS,mxREAL) ;
   pd = mxGetPr(out[OUT_PARENT]) ;
-  mexPrintf("nregions: %d\n", nregions);
 
   int k = 0;
   for (i = 0 ; i < nregions ; ++i) 
