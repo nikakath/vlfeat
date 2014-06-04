@@ -76,6 +76,7 @@ mexFunction(int nout, mxArray *out[],
   VlMserExtrReg     *er = 0;
   VlMserExtrReg     *erinv = 0;
   int nregions = 0, nregionsinv = 0;
+  int ner = 0, nerinv = 0;
   int                i, k = 0 ;
   mwSize             odims [2] ;
   mwSize             erdims [2] ;
@@ -210,12 +211,12 @@ mexFunction(int nout, mxArray *out[],
   if (dark_on_bright)
   {
     /* process the image */
-   vl_mser_process (filt, data) ;
-   er = filt->er;
+   ner = vl_mser_process (filt, data) ;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
     regions          = vl_mser_get_regions     (filt) ; // mer
+    er               = filt->er ;
   }
 
   if (bright_on_dark)
@@ -224,12 +225,12 @@ mexFunction(int nout, mxArray *out[],
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
     
     /* process the image */
-    vl_mser_process (filtinv, datainv) ;
-    erinv  =  filt->er;
+    nerinv = vl_mser_process (filtinv, datainv) ;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
     regionsinv     = vl_mser_get_regions     (filtinv) ; // mer
+    erinv          = filtinv->er ;
   }
 
   odims [0]        = nregions + nregionsinv ;
@@ -237,26 +238,33 @@ mexFunction(int nout, mxArray *out[],
   pt               = mxGetPr (out [OUT_SEEDS]) ;
 
   for (i = 0 ; i < nregions ; ++i) 
-    pt [i] = (int)regions[i] + 1 ;
+    pt [i] = (int) regions[i] + 1 ;
 
   for (i = nregions; i < nregions + nregionsinv; ++i)
-    pt [i] = -((int)regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+    pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
   /* build an array of extremal region parents to export */
 
   erdims[0] = nregions + nregionsinv ;
-  
   out[OUT_PARENTS] = mxCreateNumericArray(1, erdims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
-  for (i = 0 ; i < nregions ; ++i) 
-    if (er[i].max_stable) 
-        pt [k++] = er[i].parent + 1;
+  mexPrintf("ner: %d\nnerinv: %d\n", ner, nerinv);
 
-  for (i = nregions; i < nregions + nregionsinv; ++i)
-    if (erinv[i].max_stable) 
-        pt [k++] = erinv[i].parent + 1;
+  for (i = 0 ; i < ner ; ++i) 
+    if (er[i].max_stable) { 
+      pt [k++] = er[i].parent + 1 ;
+      mexPrintf("%d is stable\n", er[i].parent + 1) ;
+    }
+    else mexPrintf("%d is not stable\n", er[i].parent + 1) ;
+
+  for (i = ner; i < ner + nerinv; ++i) 
+    if (erinv[i-nregions].max_stable) {
+      pt [k++] = erinv[i-ner].parent + 1 ;
+      mexPrinf("%d is stable", erinv[i-ner].parent + 1) ;
+    }
+    else mexPrintf("%d is not stable\n", erinv[i-ner].parent + 1) ;
 
   /*
   if (verbose) {
