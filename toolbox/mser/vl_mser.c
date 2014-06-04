@@ -262,13 +262,13 @@ mexFunction(int nout, mxArray *out[],
   pt               = mxGetPr (out [OUT_SEEDS]) ;
 
   for (i = 0 ; i < nregions ; ++i) {
-    pt [i][0] = (int)regions[i] + 1 ;
-    pt [i][1] = (int)regions[i].parent + 1 ;
+    pt [i] = (int)regions[i] + 1 ;
+    //pt [i][1] = (int)regions[i].parent + 1 ;
   }
 
   for (i = nregions; i < nregions + nregionsinv; ++i) {
-    pt [i][0] = -((int)regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
-    pt [i][1] = -((int)regionsinv[i-nregions].parent + 1) ;
+    pt [i] = -((int)regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+    //pt [i][1] = -((int)regionsinv[i-nregions].parent + 1) ;
   }
 
   /* build an array of extremal regions to export
@@ -318,6 +318,8 @@ mexFunction(int nout, mxArray *out[],
 
     odims [0] = dof ;
     odims [1] = nframes + nframesinv;
+    mexPrintf("dof = %d\n", odims[0]);
+    mexPrintf("nframes + nframesinv = %d\n", odims[1]);
 
     out [OUT_FRAMES] = mxCreateNumericArray (2, odims, mxDOUBLE_CLASS, mxREAL) ;
     pt               = mxGetPr (out [OUT_FRAMES]) ;
