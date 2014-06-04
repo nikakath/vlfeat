@@ -47,8 +47,8 @@ mexFunction(int nout, mxArray *out[],
   enum {IN_I = 0,
         IN_END } ;
   enum {OUT_SEEDS = 0,
-        OUT_FRAMES = 1,
-        OUT_PARENT = 2} ;
+        OUT_FRAMES = 2,
+        OUT_PARENT = 1} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -74,8 +74,8 @@ mexFunction(int nout, mxArray *out[],
   VlMserFilt        *filt, *filtinv ;
   vl_uint     const *regions = 0 ;
   vl_uint     const *regionsinv = 0 ;
-  vl_uint     const *er = 0;
-  vl_uint     const *erinv = 0;
+    VlMserExtrReg   *er = 0;
+   VlMserExtrReg    *erinv = 0;
   float       const *frames = 0;
   float       const *framesinv = 0 ;
   int nregions = 0, nregionsinv = 0;
@@ -216,13 +216,14 @@ mexFunction(int nout, mxArray *out[],
   if (dark_on_bright)
   {
     /* process the image */
-    vl_mser_process (filt, data) ;
+   ner =  vl_mser_process (filt, data) ;
+   er = filt->er;
+
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
-    regions          = vl_mser_get_regions     (filt) ;
-    ner              = vl_mser_get_eregions_num(filt) ;
-    er               = vl_mser_get_eregions    (filt) ;
+    regions          = vl_mser_get_regions     (filt) ; // mer
+
 
     if (nout > 1) {
       vl_mser_ell_fit (filt) ;
@@ -237,15 +238,14 @@ mexFunction(int nout, mxArray *out[],
   {
     datainv = mxMalloc(sizeof(vl_uint)*nel) ;
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
-
+    
     /* process the image */
-    vl_mser_process (filtinv, datainv) ;
-
+    nerinv =  vl_mser_process (filtinv, datainv) ;
+    erinv = filt->er;
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
-    regionsinv     = vl_mser_get_regions     (filtinv) ;
-    nerinv         = vl_mser_get_eregions_num(filtinv) ;
-    erinv          = vl_mser_get_eregions    (filtinv) ;
+    regionsinv     = vl_mser_get_regions     (filtinv) ; // mer
+    erinv          = filtinv->ner;
 
     if (nout > 1) {
       vl_mser_ell_fit (filtinv) ;
@@ -269,23 +269,34 @@ mexFunction(int nout, mxArray *out[],
   /* build an array of extremal regions to export */
 
   /*
-  VlMserExtrReg * what = filt->er;
-  int count = 0;
-  int in_count = count;
+    VlMserExtrReg * what = filt->er;
+    int count = 0;
+    int in_count = count;
   */
 
-  erdims[0] = ner + nerinv ;
-  out[OUT_PARENT] = mxCreateCellArray(1, erdims) ;
+  erdims[0] = nregions + nregionsinv ;
+  
+  out[OUT_PARENT] = mxCreateNumericArray(1, erdims, mxUINT8_CLASS,mxREAL) ;
   pd = mxGetPr(out[OUT_PARENT]) ;
+  mexPrintf("nregions: %d\n", nregions);
 
-  for (i = 0 ; i < ner ; ++i)
-    pd [i] = (int)er [i] + 1 ;
+  int k = 0;
+  for (i = 0 ; i < nregions ; ++i) 
+    if (er [i] .max_stable) 
+      {
+        mexPrintf("parent: %d", er[i].parent);
+        pd [k++] = er[i].parent + 1;
+      }
 
-  for (i = nregions; i < ner + nerinv; ++i)
-    pd [i] = -((int)erinv [i-ner] + 1) ;
+  for (i = ner; i < erdims[0]; ++i)
+    if (er [i] .max_stable) 
+      {
+        mexPrintf("parent: %d", er[i].parent);
+        pd [k++] = er[i].parent + 1;
+      }
 
   /*
-  for (count; count < ner + nerinv; ++count) {
+    for (count; count < ner + nerinv; ++count) {
 
     int     top     = what [count] .shortcut ;
     int     next    = 0 ;
@@ -295,20 +306,20 @@ mexFunction(int nout, mxArray *out[],
     // examine all parents
     while (1) {
      
-      next     = what [top]  .parent ;
+    next     = what [top]  .parent ;
       
-      // Break if:
-      //   - there is no node above the top
-      if (next == top) break;
+    // Break if:
+    //   - there is no node above the top
+    if (next == top) break;
 
-      // add the parent to the array
-      pD[in_count] = next;
-      ++in_count;
+    // add the parent to the array
+    pD[in_count] = next;
+    ++in_count;
       
-      // so next could be the top
-      top = next ;
+    // so next could be the top
+    top = next ;
     }    
-  }
+    }
   */
 
   if (nout > 1) {
@@ -341,7 +352,7 @@ mexFunction(int nout, mxArray *out[],
     mexPrintf("mser: %d extremal regions of which\n", tot) ;
 
 #define REMAIN(test,num)                                                \
-    mexPrintf("mser:  %5d (%7.3g %% of previous) " test "\n",         \
+    mexPrintf("mser:  %5d (%7.3g %% of previous) " test "\n",           \
               tot-(num),100.0*(double)(tot-(num))/(tot+VL_EPSILON_D)) ; \
     tot -= (num) ;
 
@@ -351,7 +362,7 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("big enough,",       s-> num_too_small + sinv->num_too_small  ) ;
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
-    }
+  }
 
   /* cleanup */
   
