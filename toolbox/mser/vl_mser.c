@@ -206,12 +206,14 @@ mexFunction(int nout, mxArray *out[],
     mexPrintf("mser:   min_diversity = %g\n", vl_mser_get_min_diversity (filt)) ;
   }
 
+  int ner,nerinv;
 
   if (dark_on_bright)
   {
     /* process the image */
-   vl_mser_process (filt, data) ;
+   ner = vl_mser_process (filt, data) ;
    er = filt->er;
+  
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
@@ -224,8 +226,9 @@ mexFunction(int nout, mxArray *out[],
     for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
     
     /* process the image */
-    vl_mser_process (filtinv, datainv) ;
-    erinv  =  filt->er;
+    nerinv = vl_mser_process (filtinv, datainv) ;
+    erinv  =  filtinv->er;
+   
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
@@ -244,20 +247,21 @@ mexFunction(int nout, mxArray *out[],
 
   /* build an array of extremal region parents to export */
 
-  erdims[0] = nregions + nregionsinv ;
+  erdims[0] = nregions+nregionsinv;
   
   out[OUT_PARENTS] = mxCreateNumericArray(1, erdims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
-  for (i = 0 ; i < nregions ; ++i) 
+
+  for (i = 0 ; i < ner ; ++i) 
     if (er[i].max_stable) 
-        pt [k++] = er[i].parent + 1;
+      pt [k++] = er[i].parent + 1;
 
-  for (i = nregions; i < nregions + nregionsinv; ++i)
-    if (erinv[i].max_stable) 
-        pt [k++] = erinv[i].parent + 1;
-
+  for (i = ner; i < ner+nerinv; ++i)
+    if (erinv[i-ner].max_stable)
+      pt [k++] = -(erinv[i-ner].parent + 1);
+ 
   /*
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;

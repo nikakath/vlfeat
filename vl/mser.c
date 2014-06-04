@@ -873,9 +873,8 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
   for (i = 0 ; i < ner ; ++i) {
     if (er [i] .max_stable) mer [j++] = er [i] .index ;
   }
-
- 
   return ner;
+
 }
 
 /** -------------------------------------------------------------------
