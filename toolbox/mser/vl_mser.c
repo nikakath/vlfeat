@@ -46,8 +46,9 @@ mexFunction(int nout, mxArray *out[],
 {
   enum {IN_I = 0,
         IN_END } ;
-  enum {OUT_SEEDS = 0,
-        OUT_PARENTS = 1} ;
+  enum {OUT_SEEDS = 0, 
+        OUT_PARENTS = 1,
+        OUT_VARIATIONS = 2} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -79,7 +80,6 @@ mexFunction(int nout, mxArray *out[],
   int ner = 0, nerinv = 0;
   int                i, k = 0 ;
   mwSize             odims [2] ;
-  mwSize             erdims [2] ;
   double            *pt ;
 
   VL_USE_MATLAB_ENV ;
@@ -92,7 +92,7 @@ mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("At least one input argument is required.") ;
   }
 
-  if (nout > 2) {
+  if (nout > 3) {
     mexErrMsgTxt("Too many output arguments.");
   }
 
@@ -207,13 +207,11 @@ mexFunction(int nout, mxArray *out[],
     mexPrintf("mser:   min_diversity = %g\n", vl_mser_get_min_diversity (filt)) ;
   }
 
-  int ner,nerinv;
-
   if (dark_on_bright)
   {
     /* process the image */
    ner = vl_mser_process (filt, data) ;
-   er = filt->er;
+   er  = filt->er ;
 
     /* save regions back to array */
     nregions         = vl_mser_get_regions_num (filt) ;
@@ -228,13 +226,15 @@ mexFunction(int nout, mxArray *out[],
     
     /* process the image */
     nerinv = vl_mser_process (filtinv, datainv) ;
-    erinv  =  filtinv->er;
+    erinv  = filtinv->er ;
 
     /* save regions back to array */
     nregionsinv    = vl_mser_get_regions_num (filtinv) ;
     regionsinv     = vl_mser_get_regions     (filtinv) ; // mer
     erinv          = filtinv->er ;
   }
+
+  /* build an array of MSER seeds to export */
 
   odims [0]        = nregions + nregionsinv ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
@@ -243,26 +243,49 @@ mexFunction(int nout, mxArray *out[],
   for (i = 0 ; i < nregions ; ++i) 
     pt [i] = (int) regions[i] + 1 ;
 
-  for (i = nregions; i < nregions + nregionsinv; ++i)
+  for (i = nregions; i < nregions + nregionsinv; ++i) 
     pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
-  /* build an array of extremal region parents to export */
+  mexPrintf("Stored MSER seeds\n");
 
-  erdims[0] = nregions + nregionsinv ;
-  out[OUT_PARENTS] = mxCreateNumericArray(1, erdims, mxDOUBLE_CLASS, mxREAL) ;
+  /* build an array of MSER parent seeds to export */
+
+  odims[0] = nregions + nregionsinv ;
+  out[OUT_PARENTS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
 
   for (i = 0 ; i < ner ; ++i) 
     if (er[i].max_stable) 
-      pt [k++] = er[i].parent + 1;
+      pt [k++] = (int) er[i].parent + 1 ;
 
-  for (i = ner; i < ner+nerinv; ++i)
-    if (erinv[i-ner].max_stable)
-      pt [k++] = -(erinv[i-ner].parent + 1);
+  for (i = ner; i < ner + nerinv; ++i)
+    if (erinv[i-ner].max_stable) 
+      pt [k++] = -((int) erinv[i - ner].parent + 1) ;
+
+  mexPrintf("Stored MSER parent seeds\n");
+
+  /* build an array of MSER variations to export */
+
+  odims [0]            = nregions + nregionsinv ;
+  out [OUT_VARIATIONS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
+  pt                   = mxGetPr (out [OUT_VARIATIONS]) ;
+
+  k = 0;
+
+  for (i = 0 ; i < ner ; ++i) 
+    if (er[i].max_stable)
+      pt[k++] = er[i].variation ;
+
+  for (i = 0 ; i < ner ; ++i) 
+    if (er[i].max_stable)
+      pt[k++] = -(erinv[i - ner].variation) ;
+
+  mexPrintf("Stored MSER variations\n");
  
-  /*
+  /* print stats if in verbose mode */
+ 
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;
     VlMserStats const* sinv = vl_mser_get_stats (filtinv) ;
@@ -271,9 +294,9 @@ mexFunction(int nout, mxArray *out[],
     mexPrintf("mser: statistics:\n") ;
     mexPrintf("mser: %d extremal regions of which\n", tot) ;
 
-#define REMAIN(test, num)\                                        
-    mexPrintf("mser:  %5d (%7.3g %% of previous) " test "\n",\
-              tot-(num),100.0*(double)(tot-(num))/(tot+VL_EPSILON_D)) ;\
+#define REMAIN(test, num)                                               \                                        
+    mexPrintf("mser:  %5d (%7.3g %% of previous) " test "\n",           \
+              tot-(num),100.0*(double)(tot-(num))/(tot+VL_EPSILON_D)) ; \
     tot -= (num) ;
 
     REMAIN("maximally stable,", s-> num_unstable + sinv-> num_unstable ) ;
@@ -283,7 +306,6 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
   }
-  */
 
   /* cleanup */
   
