@@ -46,8 +46,8 @@ mexFunction(int nout, mxArray *out[],
 {
   enum {IN_I = 0,
         IN_END } ;
-  enum {OUT_SEEDS = 0, 
-        OUT_PARENTS = 1,
+  enum {OUT_SEEDS = 1, 
+        OUT_PARENTS = 0,
         OUT_VARIATIONS = 2} ;
 
   int             verbose = 0 ;
@@ -250,29 +250,31 @@ mexFunction(int nout, mxArray *out[],
 
   /* build an array of MSER parent seeds to export */
 
-  static int width = 100; // can store up to 100 parents
-  VlMserReg * r = filt->r;
   odims[0] = nregions + nregionsinv ;
-  odims[1] = 2;
+  odims[1] = 3;
   out[OUT_PARENTS] = mxCreateNumericArray(2, odims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
+
+  int length = odims[0];
 
   k = 0;
   for (i = 0 ; i < ner ; ++i)
     if (er[i].max_stable) 
       {
         pt [k] = (int) er[i].parent + 1 ;
-        pt[k+odims[0]] = (int) er[i].index + 1 ;
+        pt[k + length] = (int) er[i].index + 1 ;
+        pt[k + 2 * length] = er[i].variation;
         k++;
       }
   for (i = ner; i < ner + nerinv; ++i)
     if (erinv[i-ner].max_stable) 
       {
         pt [k] = -((int) erinv[i - ner].parent + 1) ; 
-        pt [k+odims[0]] = -((int) erinv[i - ner].index + 1) ;
+        pt [k + length] = -((int) erinv[i - ner].index + 1) ;
+        pt[k+2 * length] = -(erinv[i - ner].variation);
         k++;
       }
-
+  
   mexPrintf("Stored MSER parent seeds\n");
 
   /* build an array of MSER variations to export */
@@ -295,7 +297,7 @@ mexFunction(int nout, mxArray *out[],
   mexPrintf("Stored MSER variations\n");
  
   /* print stats if in verbose mode */
- 
+  /*
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;
     VlMserStats const* sinv = vl_mser_get_stats (filtinv) ;
@@ -316,7 +318,7 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
   }
-
+  */
   /* cleanup */
   
   if (datainv) mxFree(datainv);

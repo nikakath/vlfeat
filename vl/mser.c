@@ -463,6 +463,7 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
     }
 
     /* cumulatively add bucket sizes */
+
     for(i = 1 ; i < VL_MSER_PIX_MAXVAL ; ++i) {
       buckets [i] += buckets [i-1] ;
     }
