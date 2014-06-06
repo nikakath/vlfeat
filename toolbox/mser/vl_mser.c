@@ -236,15 +236,15 @@ mexFunction(int nout, mxArray *out[],
 
   /* build an array of MSER seeds to export */
 
-  odims [0]        = nregions + nregionsinv ;
+  odims [0]       = nregions + nregionsinv ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
-  pt               = mxGetPr (out [OUT_SEEDS]) ;
+  pt              = mxGetPr (out [OUT_SEEDS]) ;
 
   for (i = 0 ; i < nregions ; ++i) 
     pt [i] = (int) regions[i] + 1 ;
 
   for (i = nregions; i < nregions + nregionsinv; ++i) 
-    pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+  pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
   mexPrintf("Stored MSER seeds\n");
 
@@ -260,12 +260,16 @@ mexFunction(int nout, mxArray *out[],
   k = 0;
   for (i = 0 ; i < ner ; ++i)
     if (er[i].max_stable) 
+      pt [k++] = (int) er[i].parent + 1 ;
+
+  for (i = ner ; i < ner + nerinv ; ++i)
       {
         pt [k] = (int) er[i].parent + 1 ;
         pt[k + length] = (int) er[i].index + 1 ;
         pt[k + 2 * length] = er[i].variation;
         k++;
       }
+
   for (i = ner; i < ner + nerinv; ++i)
     if (erinv[i-ner].max_stable) 
       {
@@ -318,11 +322,19 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
   }
+<<<<<<< HEAD
   */
+=======
+
+  mexPrintf("Passed verbose mode\n");
+
+>>>>>>> f76afc884ad706ec68b3e6ee10f593004dc05bae
   /* cleanup */
   
   if (datainv) mxFree(datainv);
   vl_mser_delete (filt) ;
   vl_mser_delete (filtinv) ;
+
+  mexPrintf("Cleaned up\n");
   
 }
