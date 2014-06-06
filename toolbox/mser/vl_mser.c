@@ -250,24 +250,34 @@ mexFunction(int nout, mxArray *out[],
 
   /* build an array of MSER parent seeds to export */
 
+  static int width = 100; // can store up to 100 parents
+  VlMserReg * r = filt->r;
   odims[0] = nregions + nregionsinv ;
-  out[OUT_PARENTS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
+  odims[1] = 2;
+  out[OUT_PARENTS] = mxCreateNumericArray(2, odims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
-
-  for (i = 0 ; i < ner ; ++i) 
+  for (i = 0 ; i < ner ; ++i)
     if (er[i].max_stable) 
-      pt [k++] = (int) er[i].parent + 1 ;
-
+      {
+        pt [k] = (int) er[i].parent + 1 ;
+        pt[k+odims[0]] = (int) er[i].index + 1 ;
+        k++;
+      }
   for (i = ner; i < ner + nerinv; ++i)
     if (erinv[i-ner].max_stable) 
-      pt [k++] = -((int) erinv[i - ner].parent + 1) ;
+      {
+        pt [k] = -((int) erinv[i - ner].parent + 1) ; 
+        pt [k+odims[0]] = -((int) erinv[i - ner].index + 1) ;
+        k++;
+      }
 
   mexPrintf("Stored MSER parent seeds\n");
 
   /* build an array of MSER variations to export */
 
+ 
   odims [0]            = nregions + nregionsinv ;
   out [OUT_VARIATIONS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
   pt                   = mxGetPr (out [OUT_VARIATIONS]) ;
@@ -278,8 +288,8 @@ mexFunction(int nout, mxArray *out[],
     if (er[i].max_stable)
       pt[k++] = er[i].variation ;
 
-  for (i = 0 ; i < ner ; ++i) 
-    if (er[i].max_stable)
+  for (i = ner ; i < ner + nerinv ; ++i) 
+    if (er[i - ner].max_stable)
       pt[k++] = -(erinv[i - ner].variation) ;
 
   mexPrintf("Stored MSER variations\n");
