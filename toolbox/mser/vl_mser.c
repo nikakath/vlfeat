@@ -4,11 +4,11 @@
  **/
 
 /*
-Copyright (C) 2007-12 Andrea Vedaldi and Brian Fulkerson.
-All rights reserved.
+  Copyright (C) 2007-12 Andrea Vedaldi and Brian Fulkerson.
+  All rights reserved.
 
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
+  This file is part of the VLFeat library and is made available under
+  the terms of the BSD license (see the COPYING file).
 */
 
 #include <mexutils.h>
@@ -46,9 +46,9 @@ mexFunction(int nout, mxArray *out[],
 {
   enum {IN_I = 0,
         IN_END } ;
-  enum {OUT_SEEDS = 1, 
-        OUT_PARENTS = 0,
-        OUT_VARIATIONS = 2} ;
+  enum {OUT_SEEDS = 0, 
+        OUT_REGIONS = 1,
+        OUT_PARENTS = 2} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -145,7 +145,7 @@ mexFunction(int nout, mxArray *out[],
     case opt_min_diversity :
       if (!vlmxIsPlainScalar(optarg)                 ||
           (min_diversity = *mxGetPr(optarg)) < 0 ||
-           min_diversity > 1.0) {
+          min_diversity > 1.0) {
         mexErrMsgTxt("'MinDiversity' must be in the [0,1] range.") ;
       }
       break ;
@@ -167,7 +167,7 @@ mexFunction(int nout, mxArray *out[],
       break ;
 
     default :
-        abort() ;
+      abort() ;
     }
   }
 
@@ -208,33 +208,33 @@ mexFunction(int nout, mxArray *out[],
   }
 
   if (dark_on_bright)
-  {
-    /* process the image */
-   ner = vl_mser_process (filt, data) ;
-   er  = filt->er ;
+    {
+      /* process the image */
+      ner = vl_mser_process (filt, data) ;
+      er  = filt->er ;
 
-    /* save regions back to array */
-    nregions         = vl_mser_get_regions_num (filt) ;
-    regions          = vl_mser_get_regions     (filt) ; // mer
-    er               = filt->er ;
-  }
+      /* save regions back to array */
+      nregions         = vl_mser_get_regions_num (filt) ;
+      regions          = vl_mser_get_regions     (filt) ; // mser
+    }
 
   if (bright_on_dark)
-  {
-    datainv = mxMalloc(sizeof(vl_uint)*nel) ;
-    for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
+    {
+      datainv = mxMalloc(sizeof(vl_uint)*nel) ;
+      for(i=0; i<nel; i++) datainv[i] = ~data[i]; /* 255 - data */
     
-    /* process the image */
-    nerinv = vl_mser_process (filtinv, datainv) ;
-    erinv  = filtinv->er ;
+      /* process the image */
+      nerinv = vl_mser_process (filtinv, datainv) ;
+      erinv  = filtinv->er ;
 
-    /* save regions back to array */
-    nregionsinv    = vl_mser_get_regions_num (filtinv) ;
-    regionsinv     = vl_mser_get_regions     (filtinv) ; // mer
-    erinv          = filtinv->er ;
-  }
+      /* save regions back to array */
+      nregionsinv    = vl_mser_get_regions_num (filtinv) ;
+      regionsinv     = vl_mser_get_regions     (filtinv) ; // mser
+    }
 
   /* build an array of MSER seeds to export */
+
+  mexPrintf("ner: %d\nnmser: %d\n", ner + nerinv, nregions + nregionsinv) ;
 
   odims [0]       = nregions + nregionsinv ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
@@ -244,64 +244,36 @@ mexFunction(int nout, mxArray *out[],
     pt [i] = (int) regions[i] + 1 ;
 
   for (i = nregions; i < nregions + nregionsinv; ++i) 
-  pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+    pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
   mexPrintf("Stored MSER seeds\n");
+
+  /* build an array of extremal region seeds to export */
+
+  odims[0] = ner + nerinv ;
+  out[OUT_REGIONS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
+  pt = mxGetPr(out[OUT_REGIONS]) ;
+
+  for (i = 0 ; i < ner ; ++i)
+    pt[i] = (int) er[i].index +1 ;
+
+  for (i = ner ; i < ner + nerinv ; ++i)
+    pt[i - ner] = -((int) erinv[i - ner].index + 1) ;
+
+  mexPrintf("Stored ER seeds\n");
 
   /* build an array of MSER parent seeds to export */
 
   odims[0] = nregions + nregionsinv ;
-  odims[1] = 3;
-  out[OUT_PARENTS] = mxCreateNumericArray(2, odims, mxDOUBLE_CLASS, mxREAL) ;
+  out[OUT_PARENTS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
   pt = mxGetPr(out[OUT_PARENTS]) ;
 
-  int length = odims[0];
-
   k = 0;
-  for (i = 0 ; i < ner ; ++i)
-    if (er[i].max_stable) 
-      pt [k++] = (int) er[i].parent + 1 ;
-
-  for (i = ner ; i < ner + nerinv ; ++i)
-      {
-        pt [k] = (int) er[i].parent + 1 ;
-        pt[k + length] = (int) er[i].index + 1 ;
-        pt[k + 2 * length] = er[i].variation;
-        k++;
-      }
-
-  for (i = ner; i < ner + nerinv; ++i)
-    if (erinv[i-ner].max_stable) 
-      {
-        pt [k] = -((int) erinv[i - ner].parent + 1) ; 
-        pt [k + length] = -((int) erinv[i - ner].index + 1) ;
-        pt[k+2 * length] = -(erinv[i - ner].variation);
-        k++;
-      }
   
-  mexPrintf("Stored MSER parent seeds\n");
-
-  /* build an array of MSER variations to export */
-
- 
-  odims [0]            = nregions + nregionsinv ;
-  out [OUT_VARIATIONS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
-  pt                   = mxGetPr (out [OUT_VARIATIONS]) ;
-
-  k = 0;
-
-  for (i = 0 ; i < ner ; ++i) 
-    if (er[i].max_stable)
-      pt[k++] = er[i].variation ;
-
-  for (i = ner ; i < ner + nerinv ; ++i) 
-    if (er[i - ner].max_stable)
-      pt[k++] = -(erinv[i - ner].variation) ;
-
-  mexPrintf("Stored MSER variations\n");
+  // mexPrintf("Stored MSER parent seeds\n");
  
   /* print stats if in verbose mode */
-  /*
+  
   if (verbose) {
     VlMserStats const* s = vl_mser_get_stats (filt) ;
     VlMserStats const* sinv = vl_mser_get_stats (filtinv) ;
@@ -322,13 +294,10 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
   }
-<<<<<<< HEAD
-  */
-=======
+  
 
   mexPrintf("Passed verbose mode\n");
 
->>>>>>> f76afc884ad706ec68b3e6ee10f593004dc05bae
   /* cleanup */
   
   if (datainv) mxFree(datainv);

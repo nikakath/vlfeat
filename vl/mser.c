@@ -556,8 +556,8 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
 
         vl_mser_pix nr_val = 0 ;
         vl_uint     nr_idx = 0 ;
-        int         hgt   = r [ r_idx] .height ;
-        int         n_hgt = r [nr_idx] .height ;
+        int         hgt    = r [ r_idx] .height ;
+        int         n_hgt  = r [nr_idx] .height ;
 
         /*
           Now we join the two subtrees rooted at
@@ -771,7 +771,7 @@ vl_mser_process (VlMserFilt* f, vl_mser_pix const* im)
 
   nmer = ner ;
   for(i = 0 ; i < ner ; ++i) {
-    vl_uint    parent = er [i     ] .parent ;
+    vl_uint   parent = er [i     ] .parent ;
     vl_mser_pix   val = er [i     ] .value ;
     float     var = er [i     ] .variation ;
     vl_mser_pix p_val = er [parent] .value ;
