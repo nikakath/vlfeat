@@ -362,11 +362,11 @@ vl_mser_new (int ndims, int const* dims)
   f-> rell   = 0 ;
 
   /* other parameters */
-  f-> delta         = 5 ;
-  f-> max_area      = 0.75 ;
-  f-> min_area      = 3.0 / f-> nel ;
-  f-> max_variation = 0.25 ;
-  f-> min_diversity = 0.2 ;
+  f-> delta         = 1 ; // 5
+  f-> max_area      = 0.75 ; // 0.75
+  f-> min_area      = 3.0 / f-> nel ; // 3.0 / f-> nel 
+  f-> max_variation = 0.25 ; // 0.25
+  f-> min_diversity = 0.2 ; // 0.2
 
   return f ;
 }

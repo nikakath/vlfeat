@@ -47,8 +47,9 @@ mexFunction(int nout, mxArray *out[],
   enum {IN_I = 0,
         IN_END } ;
   enum {OUT_SEEDS = 0, 
-        OUT_REGIONS = 1,
-        OUT_PARENTS = 2} ;
+        OUT_PARENTS = 1,
+        OUT_VARIATIONS = 2,
+        OUT_FRAMES = 3} ;
 
   int             verbose = 0 ;
   int             opt ;
@@ -92,7 +93,7 @@ mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("At least one input argument is required.") ;
   }
 
-  if (nout > 3) {
+  if (nout > 4) {
     mexErrMsgTxt("Too many output arguments.");
   }
 
@@ -236,41 +237,123 @@ mexFunction(int nout, mxArray *out[],
 
   mexPrintf("ner: %d\nnmser: %d\n", ner + nerinv, nregions + nregionsinv) ;
 
-  odims [0]       = nregions + nregionsinv ;
+  odims [0]       = nregions ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
   pt              = mxGetPr (out [OUT_SEEDS]) ;
 
   for (i = 0 ; i < nregions ; ++i) 
     pt [i] = (int) regions[i] + 1 ;
 
+  /*
   for (i = nregions; i < nregions + nregionsinv; ++i) 
     pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
 
   mexPrintf("Stored MSER seeds\n");
 
-  /* build an array of extremal region seeds to export */
+  /* build an array of MSER seed variations to export */
 
-  odims[0] = ner + nerinv ;
-  out[OUT_REGIONS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
-  pt = mxGetPr(out[OUT_REGIONS]) ;
+  out[OUT_VARIATIONS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
+  pt                  = mxGetPr(out[OUT_VARIATIONS]) ;
 
-  for (i = 0 ; i < ner ; ++i)
-    pt[i] = (int) er[i].index +1 ;
+  k = 0;
+  for (i = 0 ; i < ner ; ++i) 
+    if (er[i].max_stable) 
+      pt [k++] = er[i].variation ;
 
+  /*
   for (i = ner ; i < ner + nerinv ; ++i)
-    pt[i - ner] = -((int) erinv[i - ner].index + 1) ;
+    if (erinv[i-ner].max_stable)
+      pt [k++] = -(er[i-ner].variation) ;
+  */
 
-  mexPrintf("Stored ER seeds\n");
+  mexPrintf("Stored MSER variations\n");
 
   /* build an array of MSER parent seeds to export */
 
-  odims[0] = nregions + nregionsinv ;
   out[OUT_PARENTS] = mxCreateNumericArray(1, odims, mxDOUBLE_CLASS, mxREAL) ;
-  pt = mxGetPr(out[OUT_PARENTS]) ;
+  pt               = mxGetPr(out[OUT_PARENTS]) ;
 
   k = 0;
-  
-  // mexPrintf("Stored MSER parent seeds\n");
+  for (i = 0 ; i < ner ; ++i) {
+    if (er[i].max_stable) { 
+      vl_uint par = er[i].parent ;
+
+      if (er[i].index == er[par].index ||
+          er[par].max_stable) {
+
+        pt[k++] = (int) er[par].index + 1 ;
+        //mexPrintf("Maximally stable?\n") ;
+
+      } // if
+
+      else {
+        //mexPrintf("Not maximally stable!\n") ;
+        vl_uint next ;
+
+        while (!er[par].max_stable) {
+          //mexPrintf("Searching...\n") ;
+          next = er[par].parent ;
+          if (next == par) break;
+          par = next ;
+        } // while
+
+        pt[k++] = (int) er[par].index + 1 ;
+      } // else
+    } // if
+  } // for   
+
+  /* optionally compute and save ellipsoids */
+  if (nout > 1) {
+
+    odims [0] = dof ;
+    odims [1] = nframes + nframesinv;
+
+    out [OUT_FRAMES] = mxCreateNumericArray (2, odims, mxDOUBLE_CLASS, mxREAL) ;
+    pt = mxGetPr (out [OUT_FRAMES]) ;
+
+    for (i = 0 ; i < nframes ; ++i) {
+      for (j = 0 ; j < dof ; ++j) {
+        pt [i * dof + j] = frames [i * dof + j] + ((j < ndims)?1.0:0.0) ;
+      }
+    }
+
+    for (i = nframes ; i < nframes + nframesinv ; ++i) {
+      for (j = 0 ; j < dof ; ++j) {
+        pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
+      }
+    }
+  }
+
+  /*
+  for (i = ner ; i < ner + nerinv ; ++i) {
+    if (erinv[i - ner].max_stable) {
+      vl_uint par = erinv[i - ner].parent ;
+
+      if (erinv[i - ner].index == erinv[par].index ||
+          erinv[par].max_stable) {
+
+        pt[k++] = -((int) erinv[par].index + 1) ; 
+        mexPrintf("Maximally stable?\n") ;
+
+      } // if
+
+      else {
+        mexPrintf("Not maximally stable!\n") ;
+        vl_uint next ;
+
+        while (!erinv[par].max_stable) {
+          next = erinv[par].parent ;
+          if (next == par) break ;
+          par = next ;
+        } // while
+
+        pt[k++] = -((int) erinv[par].index + 1) ;
+      } // else
+    } // if
+  } // for
+  */
+
+  mexPrintf("Stored MSER parent seeds\n");
  
   /* print stats if in verbose mode */
   
@@ -294,7 +377,6 @@ mexFunction(int nout, mxArray *out[],
     REMAIN("diverse enough.",   s-> num_duplicates + sinv->num_duplicates ) ;
 
   }
-  
 
   mexPrintf("Passed verbose mode\n");
 
