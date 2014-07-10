@@ -303,6 +303,8 @@ mexFunction(int nout, mxArray *out[],
   } // for   
 
   /* optionally compute and save ellipsoids */
+  
+  /*
   if (nout > 1) {
 
     odims [0] = dof ;
@@ -322,7 +324,7 @@ mexFunction(int nout, mxArray *out[],
         pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
       }
     }
-  }
+  } */
 
   /*
   for (i = ner ; i < ner + nerinv ; ++i) {
