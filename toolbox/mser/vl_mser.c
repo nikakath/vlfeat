@@ -72,16 +72,19 @@ mexFunction(int nout, mxArray *out[],
   vl_mser_pix const *data ;
   vl_mser_pix *datainv = 0;
 
-  VlMserFilt        *filt, *filtinv ;
-  vl_uint     const *regions = 0 ;
-  vl_uint     const *regionsinv = 0 ;
+  VlMserFilt *filt, *filtinv ;
+  vl_uint const *regions = 0 ;
+  vl_uint const *regionsinv = 0 ;
+  float const *frames = 0;
+  float const *framesinv = 0 ;
   VlMserExtrReg     *er = 0;
   VlMserExtrReg     *erinv = 0;
   int nregions = 0, nregionsinv = 0;
+  int nframes = 0, nframesinv = 0;
   int ner = 0, nerinv = 0;
-  int                i, k = 0 ;
-  mwSize             odims [2] ;
-  double            *pt ;
+  int i, k, j, dof = 0 ;
+  mwSize odims [2] ;
+  double *pt ;
 
   VL_USE_MATLAB_ENV ;
 
@@ -217,6 +220,13 @@ mexFunction(int nout, mxArray *out[],
       /* save regions back to array */
       nregions         = vl_mser_get_regions_num (filt) ;
       regions          = vl_mser_get_regions     (filt) ; // mser
+
+      /* get frame information */
+      vl_mser_ell_fit (filt) ;
+
+      dof = vl_mser_get_ell_dof (filt) ;
+      nframes = vl_mser_get_ell_num (filt) ;
+      frames = vl_mser_get_ell (filt) ;
     }
 
   if (bright_on_dark)
@@ -231,11 +241,18 @@ mexFunction(int nout, mxArray *out[],
       /* save regions back to array */
       nregionsinv    = vl_mser_get_regions_num (filtinv) ;
       regionsinv     = vl_mser_get_regions     (filtinv) ; // mser
+
+      /* get frame information */
+      vl_mser_ell_fit (filtinv) ;
+
+      dof = vl_mser_get_ell_dof (filtinv) ;
+      nframesinv = vl_mser_get_ell_num (filtinv) ;
+      framesinv = vl_mser_get_ell (filtinv) ;
     }
 
   /* build an array of MSER seeds to export */
 
-  mexPrintf("ner: %d\nnmser: %d\n", ner + nerinv, nregions + nregionsinv) ;
+  mexPrintf("ner: %d\nnmser: %d\nnframes: %d\n", ner + nerinv, nregions + nregionsinv, nframes) ;
 
   odims [0]       = nregions ;
   out [OUT_SEEDS] = mxCreateNumericArray (1, odims, mxDOUBLE_CLASS,mxREAL) ;
@@ -246,7 +263,7 @@ mexFunction(int nout, mxArray *out[],
 
   /*
   for (i = nregions; i < nregions + nregionsinv; ++i) 
-    pt [i] = -((int) regionsinv[i-nregions] + 1) ; /* Inverted seed means dark on bright */
+    pt [i] = -((int) regionsinv[i-nregions] + 1) ; Inverted seed means dark on bright */
 
   mexPrintf("Stored MSER seeds\n");
 
@@ -302,30 +319,6 @@ mexFunction(int nout, mxArray *out[],
     } // if
   } // for   
 
-  /* optionally compute and save ellipsoids */
-  
-  /*
-  if (nout > 1) {
-
-    odims [0] = dof ;
-    odims [1] = nframes + nframesinv;
-
-    out [OUT_FRAMES] = mxCreateNumericArray (2, odims, mxDOUBLE_CLASS, mxREAL) ;
-    pt = mxGetPr (out [OUT_FRAMES]) ;
-
-    for (i = 0 ; i < nframes ; ++i) {
-      for (j = 0 ; j < dof ; ++j) {
-        pt [i * dof + j] = frames [i * dof + j] + ((j < ndims)?1.0:0.0) ;
-      }
-    }
-
-    for (i = nframes ; i < nframes + nframesinv ; ++i) {
-      for (j = 0 ; j < dof ; ++j) {
-        pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
-      }
-    }
-  } */
-
   /*
   for (i = ner ; i < ner + nerinv ; ++i) {
     if (erinv[i - ner].max_stable) {
@@ -356,6 +349,28 @@ mexFunction(int nout, mxArray *out[],
   */
 
   mexPrintf("Stored MSER parent seeds\n");
+
+  /* optionally compute and save ellipsoids */
+  
+  odims [0] = dof ;
+  odims [1] = nframes ;
+
+  out [OUT_FRAMES] = mxCreateNumericArray (2, odims, mxDOUBLE_CLASS, mxREAL) ;
+  pt = mxGetPr (out [OUT_FRAMES]) ;
+
+  for (i = 0 ; i < nframes ; ++i) {
+    for (j = 0 ; j < dof ; ++j) {
+      pt [i * dof + j] = frames [i * dof + j] + ((j < ndims)?1.0:0.0) ;
+    }
+  }
+
+  /*
+  for (i = nframes ; i < nframes + nframesinv ; ++i) {
+    for (j = 0 ; j < dof ; ++j) {
+      pt [i * dof + j] = framesinv [(i-nframes) * dof + j] + ((j < ndims)?1.0:0.0) ;
+    }
+  } 
+  */
  
   /* print stats if in verbose mode */
   
